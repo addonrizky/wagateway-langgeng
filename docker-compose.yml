@@ -11,8 +11,8 @@ services:
             - /bin/sh
             - -c
             - |
-                npm install pm2 -g
-                pm2 start --no-daemon  index.js
+                npm install
+                nodemon index.js
         environment:
             HOST_DB_LANGGENG: host.docker.internal
             USER_DB_LANGGENG: user

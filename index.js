@@ -71,6 +71,7 @@ app.get('/qr', async (req, res) => {
     const id = req.query.id;
     let connstate = null
     let repeateGenQR = 0
+    let counterResp = 0
 
     if (clientMap[id] && clientMap[id].statusConn == false) {
         connstate = await clientMap[id].client.getState()
@@ -117,12 +118,18 @@ app.get('/qr', async (req, res) => {
             fs.rmSync('./.wwebjs_auth/session-' + id, {recursive: true, force: true,})
         }
         res.send(qr)
+        counterResp++
         return
     });
 
-    client.on('ready', () => {
+    client.on('ready', async() => {
         console.log('Client is ready!');
         clientMap[id] = {client: client, statusConn : true}
+
+        if(counterResp == 0) {
+            const connstate = await client.getState()
+            res.send(connstate)
+        }
     });
 
     client.on('message', async msg => {
