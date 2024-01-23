@@ -57,7 +57,7 @@ app.post('/message/send', async (req, res) => {
             res.send("okee deh")
         });
 
-        client.initialize()
+        client.initialize().catch(_ => _)
     }
 
     if (clientMap[id] && clientMap[id].statusConn == true) {
@@ -155,7 +155,7 @@ app.get('/qr', async (req, res) => {
         console.log("sini?")
     })
 
-    client.initialize()
+    client.initialize().catch(_ => _)
 })
 
 app.listen(port, function () {
