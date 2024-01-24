@@ -57,7 +57,9 @@ app.post('/message/send', async (req, res) => {
             res.send("okee deh")
         });
 
-        client.initialize().catch(_ => _)
+        client.initialize().catch(_ => {
+            console.log("ADUHHH KENA CATCH NIHH")
+        })
     }
 
     if (clientMap[id] && clientMap[id].statusConn == true) {
@@ -81,6 +83,7 @@ app.get('/qr', async (req, res) => {
     }
 
     if (clientMap[id] && clientMap[id].statusConn == true) {
+        console.log("KE SINI GA  SIH  KALO CONNECTED")
         connstate = await clientMap[id].client.getState()
         console.log("status connection : ", connstate)
         res.send(connstate)
@@ -155,7 +158,13 @@ app.get('/qr', async (req, res) => {
         console.log("sini?")
     })
 
-    client.initialize().catch(_ => _)
+    client.on('change_state', state => {
+        console.log("perubahan state nya : ", state)
+    })
+
+    client.initialize().catch(_ => {
+        console.log("EH KE CATCH DEH")
+    })
 })
 
 app.listen(port, function () {
