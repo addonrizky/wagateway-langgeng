@@ -14,6 +14,28 @@ var corsOptions = {
 
 var clientMap = {}
 
+/* ------------------------------------------------------------------------- */
+const clientPre = new Client({
+    puppeteer: {
+        args: [
+            '--no-sandbox',
+        ],
+        headless: true,
+    },
+    authStrategy: new LocalAuth({ clientId: process.env.HARDCODED_USER_ID })
+})
+
+clientPre.initialize().catch(_ => {
+    console.log("ADUHHH KENA CATCH NIHH YG PREEE")
+})
+
+clientPre.on('ready', async () => {
+    console.log('Client is ready!');
+    clientMap[process.env.HARDCODED_USER_ID] = {client: clientPre, statusConn : true}
+});
+
+/* ------------------------------------------------------------------------- */
+
 app.use(cors(corsOptions));
 app.use(express.json())
 
