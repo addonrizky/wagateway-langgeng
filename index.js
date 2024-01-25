@@ -14,6 +14,28 @@ var corsOptions = {
 
 var clientMap = {}
 
+/* ------------------------------------------------------------------------- */
+const clientPre = new Client({
+    puppeteer: {
+        args: [
+            '--no-sandbox',
+        ],
+        headless: true,
+    },
+    authStrategy: new LocalAuth({ clientId: process.env.HARDCODED_USER_ID })
+})
+
+clientPre.initialize().catch(_ => {
+    console.log("ADUHHH KENA CATCH NIHH YG PREEE")
+})
+
+clientPre.on('ready', async () => {
+    console.log('Client is ready!');
+    clientMap[process.env.HARDCODED_USER_ID] = {client: clientPre, statusConn : true}
+});
+
+/* ------------------------------------------------------------------------- */
+
 app.use(cors(corsOptions));
 app.use(express.json())
 
@@ -32,8 +54,9 @@ app.post('/message/send', async (req, res) => {
 
     // Getting chatId from the number.
     // we have to delete "+" from the beginning and add "@c.us" at the end of the number.
-    const chatId = phone.substring(1) + "@c.us";
+    const chatId = phone + "@c.us";
 
+    let isSent = ""
     // check client map
     // if client not exist check in local storage webauth
     // if exist then set the map with founded 
@@ -48,13 +71,42 @@ app.post('/message/send', async (req, res) => {
             authStrategy: new LocalAuth({ clientId: id })
         })
 
-        client.on('ready', () => {
+        client.on('ready', async () => {
             console.log('Client is ready!');
             clientMap[id] = {client: client, statusConn : true}
 
             // Sending message.
-            clientMap[id].client.sendMessage(chatId, message);
+            isSent = await clientMap[id].client.sendMessage(chatId, message);
+            console.log("terkirim ges msg nya A1 : ", isSent._data)
             res.send("okee deh")
+        });
+
+        client.on('message', async msg => {
+            if (msg.body == '!ping') {
+                msg.reply('pong');
+            }
+    
+            if (msg.body == 'voucher statistic') {
+                vstat = await getVoucherStatistic()
+                msg.reply(JSON.stringify(vstat))
+            }
+
+            if(msg.body == ''){
+                console.log("bodynya kosongg")
+                console.log(msg)
+                return
+            }
+    
+            if(msg.body != ''){
+                console.log("ada nih bodynya aman")
+            }
+    
+            try{
+                callWebHookLanggeng(msg)
+            } catch(e) {
+                console.log("error incoming message")
+            }
+            
         });
 
         client.initialize().catch(_ => {
@@ -64,7 +116,8 @@ app.post('/message/send', async (req, res) => {
 
     if (clientMap[id] && clientMap[id].statusConn == true) {
         // Sending message.
-        clientMap[id].client.sendMessage(chatId, message);
+        isSent = await clientMap[id].client.sendMessage(chatId, message);
+        console.log("terkirim ges msg nya A1 : ", isSent._data)
         res.send("okee deh")
     }
 })
@@ -110,7 +163,7 @@ app.get('/qr', async (req, res) => {
         // Generate and scan this code with your phone
         console.log("qr successfully generated", qr)
         console.log("repeated times : ", repeateGenQR)
-        if(repeateGenQR > 3){
+        if(repeateGenQR > 1){
             try{
                 client.pupBrowser.close()
             } catch(e){
@@ -144,6 +197,23 @@ app.get('/qr', async (req, res) => {
             vstat = await getVoucherStatistic()
             msg.reply(JSON.stringify(vstat))
         }
+
+        if(msg.body == ''){
+            console.log("bodynya kosongg")
+            console.log(msg)
+            return
+        }
+
+        if(msg.body != ''){
+            console.log("ada nih bodynya aman")
+        }
+
+        try {
+            callWebHookLanggeng(msg)
+        } catch(e){
+            console.log("error call webhook")
+        }
+        
     });
 
     client.on('disconnected', rsn => {
@@ -168,6 +238,8 @@ app.get('/qr', async (req, res) => {
 })
 
 app.listen(port, function () {
+    console.log("langgeng api url : ", process.env.LANGGENG_API_URL)
+    console.log("hardcode usercommprovider code : ", process.env.HARDCODED_CODE_USERCOMM)
     console.log('Express server lisening on port ' + port);
 });
 
@@ -180,4 +252,24 @@ async function getVoucherStatistic() {
     console.log("response data : ", response.data)
 
     return response.data
+}
+
+async function callWebHookLanggeng(data) {
+    const config = {
+        headers:{
+            'Content-Type': 'application/json',
+        }
+    };
+
+    try {
+        const response = await axios.post(process.env.LANGGENG_API_URL +'/api/communication-providers/'+process.env.HARDCODED_CODE_USERCOMM+'/webhooks', data, config)
+    } catch(e){
+        console.log("error callwebhook")
+        return "notok"
+    }
+    
+
+    //console.log("response data : ", response.data)
+
+    return "OK"
 }
