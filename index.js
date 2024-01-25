@@ -32,8 +32,9 @@ app.post('/message/send', async (req, res) => {
 
     // Getting chatId from the number.
     // we have to delete "+" from the beginning and add "@c.us" at the end of the number.
-    const chatId = phone.substring(1) + "@c.us";
+    const chatId = phone + "@c.us";
 
+    let isSent = ""
     // check client map
     // if client not exist check in local storage webauth
     // if exist then set the map with founded 
@@ -48,13 +49,32 @@ app.post('/message/send', async (req, res) => {
             authStrategy: new LocalAuth({ clientId: id })
         })
 
-        client.on('ready', () => {
+        client.on('ready', async () => {
             console.log('Client is ready!');
             clientMap[id] = {client: client, statusConn : true}
 
             // Sending message.
-            clientMap[id].client.sendMessage(chatId, message);
+            isSent = await clientMap[id].client.sendMessage(chatId, message);
+            console.log("terkirim ges msg nya A1 : ", isSent._data)
             res.send("okee deh")
+        });
+
+        client.on('message', async msg => {
+            if (msg.body == '!ping') {
+                msg.reply('pong');
+            }
+    
+            if (msg.body == 'voucher statistic') {
+                vstat = await getVoucherStatistic()
+                msg.reply(JSON.stringify(vstat))
+            }
+    
+            try{
+                callWebHookLanggeng(msg)
+            } catch(e) {
+                console.log("error incoming message")
+            }
+            
         });
 
         client.initialize().catch(_ => {
@@ -64,7 +84,8 @@ app.post('/message/send', async (req, res) => {
 
     if (clientMap[id] && clientMap[id].statusConn == true) {
         // Sending message.
-        clientMap[id].client.sendMessage(chatId, message);
+        isSent = await clientMap[id].client.sendMessage(chatId, message);
+        console.log("terkirim ges msg nya A1 : ", isSent._data)
         res.send("okee deh")
     }
 })
@@ -110,7 +131,7 @@ app.get('/qr', async (req, res) => {
         // Generate and scan this code with your phone
         console.log("qr successfully generated", qr)
         console.log("repeated times : ", repeateGenQR)
-        if(repeateGenQR > 3){
+        if(repeateGenQR > 1){
             try{
                 client.pupBrowser.close()
             } catch(e){
@@ -144,6 +165,23 @@ app.get('/qr', async (req, res) => {
             vstat = await getVoucherStatistic()
             msg.reply(JSON.stringify(vstat))
         }
+
+        if(msg.body == ''){
+            console.log("bodynya kosongg")
+            console.log(msg)
+            return
+        }
+
+        if(msg.body == ''){
+            console.log("ada nih bodynya aman")
+        }
+
+        try {
+            callWebHookLanggeng(msg)
+        } catch(e){
+            console.log("error call webhook")
+        }
+        
     });
 
     client.on('disconnected', rsn => {
@@ -180,4 +218,24 @@ async function getVoucherStatistic() {
     console.log("response data : ", response.data)
 
     return response.data
+}
+
+async function callWebHookLanggeng(data) {
+    const config = {
+        headers:{
+            'Content-Type': 'application/json',
+        }
+    };
+
+    try {
+        const response = await axios.post('https://81d2-182-253-59-135.ngrok-free.app/api/communication-providers/9a67b153-de24-484c-8d7c-a16307c15b70/webhooks', data, config)
+    } catch(e){
+        console.log("error callwebhook")
+        return "notok"
+    }
+    
+
+    //console.log("response data : ", response.data)
+
+    return "OK"
 }
