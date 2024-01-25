@@ -68,6 +68,16 @@ app.post('/message/send', async (req, res) => {
                 vstat = await getVoucherStatistic()
                 msg.reply(JSON.stringify(vstat))
             }
+
+            if(msg.body == ''){
+                console.log("bodynya kosongg")
+                console.log(msg)
+                return
+            }
+    
+            if(msg.body != ''){
+                console.log("ada nih bodynya aman")
+            }
     
             try{
                 callWebHookLanggeng(msg)
@@ -172,7 +182,7 @@ app.get('/qr', async (req, res) => {
             return
         }
 
-        if(msg.body == ''){
+        if(msg.body != ''){
             console.log("ada nih bodynya aman")
         }
 
