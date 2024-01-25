@@ -216,6 +216,8 @@ app.get('/qr', async (req, res) => {
 })
 
 app.listen(port, function () {
+    console.log("langgeng api url : ", process.env.LANGGENG_API_URL)
+    console.log("hardcode usercommprovider code : ", process.env.HARDCODED_CODE_USERCOMM)
     console.log('Express server lisening on port ' + port);
 });
 
@@ -238,7 +240,7 @@ async function callWebHookLanggeng(data) {
     };
 
     try {
-        const response = await axios.post('https://81d2-182-253-59-135.ngrok-free.app/api/communication-providers/9a67b153-de24-484c-8d7c-a16307c15b70/webhooks', data, config)
+        const response = await axios.post(process.env.LANGGENG_API_URL +'/api/communication-providers/'+process.env.HARDCODED_CODE_USERCOMM+'/webhooks', data, config)
     } catch(e){
         console.log("error callwebhook")
         return "notok"

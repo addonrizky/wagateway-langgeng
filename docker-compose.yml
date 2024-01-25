@@ -14,6 +14,8 @@ services:
                 npm install
                 nodemon index.js
         environment:
+            LANGGENG_API_URL: https://81d2-182-253-59-135.ngrok-free.app 
+            HARDCODED_CODE_USERCOMM: 9a67b153-de24-484c-8d7c-a16307c15b70
             HOST_DB_LANGGENG: host.docker.internal
             USER_DB_LANGGENG: user
             PASS_DB_LANGGENG: test
