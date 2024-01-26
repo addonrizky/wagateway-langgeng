@@ -34,6 +34,35 @@ clientPre.on('ready', async () => {
     clientMap[process.env.HARDCODED_USER_ID] = {client: clientPre, statusConn : true}
 });
 
+clientPre.on('message', async msg => {
+    if (msg.body == '!ping') {
+        msg.reply('pong');
+    }
+
+    if (msg.body == 'voucher statistic') {
+        vstat = await getVoucherStatistic()
+        msg.reply(JSON.stringify(vstat))
+    }
+
+    if(msg.body == ''){
+        console.log("bodynya kosongg")
+        console.log(msg)
+        return
+    }
+
+    if(msg.body != ''){
+        console.log("ada nih bodynya aman")
+    }
+
+    try{
+        callWebHookLanggeng(msg)
+    } catch(e) {
+        console.log("error incoming message")
+    }
+    
+});
+
+
 /* ------------------------------------------------------------------------- */
 
 app.use(cors(corsOptions));
