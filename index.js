@@ -180,14 +180,13 @@ app.get('/qr', async (req, res) => {
                 '--no-sandbox',
             ],
             headless: true,
-            qrMaxRetries: 3
         },
         authStrategy: new LocalAuth({ clientId: id })
     });
 
     clientMap[id] = {client: client, statusConn : false}
 
-    client.on('qr', (qr) => {
+    client.once('qr', (qr) => {
         repeateGenQR += 1
         // Generate and scan this code with your phone
         console.log("qr successfully generated", qr)
@@ -261,8 +260,8 @@ app.get('/qr', async (req, res) => {
         console.log("perubahan state nya : ", state)
     })
 
-    client.initialize().catch(_ => {
-        console.log("EH KE CATCH DEH")
+    client.initialize().catch(e => {
+        console.log("EH KE CATCH DEH", e)
     })
 })
 
@@ -291,9 +290,9 @@ async function callWebHookLanggeng(data) {
     };
 
     try {
-        const response = await axios.post(process.env.LANGGENG_API_URL +'/api/communication-providers/'+process.env.HARDCODED_CODE_USERCOMM+'/webhooks', data, config)
+        const response = await axios.post('http://'+process.env.LANGGENG_API_URL +'/api/communication-providers/'+process.env.HARDCODED_CODE_USERCOMM+'/webhooks', data, config)
     } catch(e){
-        console.log("error callwebhook")
+        console.log("error callwebhook", e)
         return "notok"
     }
     
