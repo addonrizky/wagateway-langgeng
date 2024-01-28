@@ -13,10 +13,14 @@ services:
             - |
                 npm install
                 nodemon index.js
+        networks:
+            - default
+        extra_hosts:
+            - "host.docker.internal:host-gateway"
         environment:
-            LANGGENG_API_URL: https://81d2-182-253-59-135.ngrok-free.app 
-            HARDCODED_CODE_USERCOMM: 9a67b153-de24-484c-8d7c-a16307c15b70
-            HARDCODED_USER_ID: 1
+            LANGGENG_API_URL: host.docker.internal
+            HARDCODED_CODE_USERCOMM: 9a25c2ce-eafc-47da-98b7-75e3a5b43666
+            HARDCODED_USER_ID: 30
             HOST_DB_LANGGENG: host.docker.internal
             USER_DB_LANGGENG: user
             PASS_DB_LANGGENG: test
