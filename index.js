@@ -72,6 +72,22 @@ app.get('/', (req, res) => {
     res.send('Hello World!')
 })
 
+app.get('/status', (req, res) => {
+    const id = req.query.id
+
+    if(!clientMap[id]){
+        res.send("CLIENT NOT EXIST")
+        return
+    }
+
+    const statusConn = clientMap[id].statusConn
+    if (statusConn == true){
+        res.send("CONNECTED")
+    } else {
+        res.send("NOTOK")
+    }
+})
+
 app.post('/message/send', async (req, res) => {
     const id = req.body.user_id
 
@@ -156,10 +172,22 @@ app.get('/qr', async (req, res) => {
     let connstate = null
     let repeateGenQR = 0
     let counterResp = 0
+    let diffGeneratedTime = 0
 
     if (clientMap[id] && clientMap[id].statusConn == false) {
         connstate = await clientMap[id].client.getState()
         console.log("status connection : ", connstate)
+
+        if(connstate == null){
+            console.log("waduhh null lagihh")
+            diffGeneratedTime = (Math.abs(new Date()) - clientMap[id].createdOn) / 1000
+            console.log("diff generated time : ", diffGeneratedTime)
+            if(diffGeneratedTime < 90) {
+                res.send("kecepetan request ulang nya")
+                return
+            }
+        }
+
         clientMap[id].client.destroy()
         delete clientMap[id]
     }
@@ -184,9 +212,10 @@ app.get('/qr', async (req, res) => {
         authStrategy: new LocalAuth({ clientId: id })
     });
 
-    clientMap[id] = {client: client, statusConn : false}
+    clientMap[id] = {client: client, statusConn : false, createdOn: 0}
 
     client.once('qr', (qr) => {
+        clientMap[id].createdOn = Math.abs(new Date())
         repeateGenQR += 1
         // Generate and scan this code with your phone
         console.log("qr successfully generated", qr)
