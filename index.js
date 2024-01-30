@@ -3,6 +3,7 @@ const express = require('express')
 const cors = require('cors');
 const axios = require('axios');
 const fs = require("fs");
+const sess = require("./session")
 
 const app = express()
 const port = 3093
@@ -13,57 +14,6 @@ var corsOptions = {
 }
 
 var clientMap = {}
-
-/* ------------------------------------------------------------------------- */
-const clientPre = new Client({
-    puppeteer: {
-        args: [
-            '--no-sandbox',
-        ],
-        headless: true,
-    },
-    authStrategy: new LocalAuth({ clientId: process.env.HARDCODED_USER_ID })
-})
-
-clientPre.initialize().catch(_ => {
-    console.log("ADUHHH KENA CATCH NIHH YG PREEE")
-})
-
-clientPre.on('ready', async () => {
-    console.log('Client is ready!');
-    clientMap[process.env.HARDCODED_USER_ID] = {client: clientPre, statusConn : true}
-});
-
-clientPre.on('message', async msg => {
-    if (msg.body == '!ping') {
-        msg.reply('pong');
-    }
-
-    if (msg.body == 'voucher statistic') {
-        vstat = await getVoucherStatistic()
-        msg.reply(JSON.stringify(vstat))
-    }
-
-    if(msg.body == ''){
-        console.log("bodynya kosongg")
-        console.log(msg)
-        return
-    }
-
-    if(msg.body != ''){
-        console.log("ada nih bodynya aman")
-    }
-
-    try{
-        callWebHookLanggeng(msg)
-    } catch(e) {
-        console.log("error incoming message")
-    }
-    
-});
-
-
-/* ------------------------------------------------------------------------- */
 
 app.use(cors(corsOptions));
 app.use(express.json())
@@ -190,6 +140,7 @@ app.get('/qr', async (req, res) => {
 
         clientMap[id].client.destroy()
         delete clientMap[id]
+        fs.rmSync('./.wwebjs_auth/session-' + id, {recursive: true, force: true,})
     }
 
     if (clientMap[id] && clientMap[id].statusConn == true) {
@@ -294,11 +245,19 @@ app.get('/qr', async (req, res) => {
     })
 })
 
-app.listen(port, function () {
-    console.log("langgeng api url : ", process.env.LANGGENG_API_URL)
-    console.log("hardcode usercommprovider code : ", process.env.HARDCODED_CODE_USERCOMM)
-    console.log('Express server lisening on port ' + port);
-});
+sess.listDirectories('./.wwebjs_auth')
+.then(async function(listDir){
+    listDir.filter(dir => dir != "session")
+    .map(async dir => {
+        const clientStarted = await startClient(false, dir.split("-")[1])
+        clientMap[dir.split("-")[1]] = {client: clientStarted, statusConn : false, createdOn: Math.abs(new Date())}
+    })
+
+    app.listen(port, async function () {
+        console.log("langgeng api url : ", process.env.LANGGENG_API_URL)
+        console.log('Express server lisening on port ' + port);
+    });
+})
 
 async function getVoucherStatistic() {
 
@@ -329,4 +288,56 @@ async function callWebHookLanggeng(data) {
     //console.log("response data : ", response.data)
 
     return "OK"
+}
+
+async function startClient(withQR, clientId){
+    console.log("try to resurrect clientId : ", clientId)
+    const clientPre = new Client({
+        puppeteer: {
+            args: [
+                '--no-sandbox',
+            ],
+            headless: true,
+        },
+        authStrategy: new LocalAuth({ clientId: clientId})
+    })
+    
+    clientPre.initialize().catch(_ => {
+        console.log("ADUHHH KENA CATCH NIHH YG PREEE")
+    })
+    
+    clientPre.on('ready', async () => {
+        console.log('Client with id ' +clientId+ ' is ready!');
+        clientMap[clientId] = {client: clientPre, statusConn : true}
+    });
+    
+    clientPre.on('message', async msg => {
+        if (msg.body == '!ping') {
+            msg.reply('pong');
+        }
+    
+        if (msg.body == 'voucher statistic') {
+            vstat = await getVoucherStatistic()
+            msg.reply(JSON.stringify(vstat))
+        }
+    
+        if(msg.body == ''){
+            console.log("bodynya kosongg")
+            console.log(msg)
+            return
+        }
+    
+        if(msg.body != ''){
+            console.log("ada nih bodynya aman")
+        }
+    
+        try{
+            callWebHookLanggeng(msg)
+        } catch(e) {
+            console.log("error incoming message")
+        }
+        
+    });
+
+    return clientPre
 }
