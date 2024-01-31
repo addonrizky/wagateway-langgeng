@@ -4,6 +4,8 @@ const cors = require('cors');
 const axios = require('axios');
 const fs = require("fs");
 const sess = require("./session")
+const db = require('./config/database');
+const users = require('./database/users')
 
 const app = express()
 const port = 3093
@@ -97,7 +99,7 @@ app.post('/message/send', async (req, res) => {
             }
     
             try{
-                callWebHookLanggeng(msg)
+                callWebHookLanggeng(msg, id)
             } catch(e) {
                 console.log("error incoming message")
             }
@@ -188,7 +190,8 @@ app.get('/qr', async (req, res) => {
 
     client.on('ready', async() => {
         console.log('Client is ready!');
-        clientMap[id] = {client: client, statusConn : true}
+        const userInfo = await users.getUser(id)
+        clientMap[id] = {client: client, statusConn : true, userInfo : userInfo}
 
         if(counterResp == 0) {
             const connstate = await client.getState()
@@ -217,7 +220,7 @@ app.get('/qr', async (req, res) => {
         }
 
         try {
-            callWebHookLanggeng(msg)
+            callWebHookLanggeng(msg, id)
         } catch(e){
             console.log("error call webhook")
         }
@@ -245,18 +248,30 @@ app.get('/qr', async (req, res) => {
     })
 })
 
-sess.listDirectories('./.wwebjs_auth')
-.then(async function(listDir){
-    listDir.filter(dir => dir != "session")
-    .map(async dir => {
-        const clientStarted = await startClient(false, dir.split("-")[1])
-        clientMap[dir.split("-")[1]] = {client: clientStarted, statusConn : false, createdOn: Math.abs(new Date())}
-    })
 
-    app.listen(port, async function () {
-        console.log("langgeng api url : ", process.env.LANGGENG_API_URL)
-        console.log('Express server lisening on port ' + port);
-    });
+// Creating MySQL connection
+db.connect("mode_production", async function (err, rslt) {
+    if (err) {
+        console.log('Unable to connect to MySQL.');
+        process.exit(1);
+    } else {
+        sess.listDirectories('./.wwebjs_auth')
+        .then(async function(listDir){
+            listDir.filter(dir => dir != "session")
+            .map(async dir => {
+                const userCode = dir.split("-")[1]
+                const userInfo = await users.getUser(userCode)
+                const clientStarted = await startClient(false, userInfo[0])
+                //clientMap[userCode] = {client: clientStarted, statusConn : false, createdOn: Math.abs(new Date()), userInfo: userInfo[0]}
+            })
+        })
+        .then(function(){
+            app.listen(port, async function () {
+                console.log("langgengzzz api url : ", process.env.LANGGENG_API_URL)
+                console.log('Express server lisening on port ' + port);
+            });
+        })
+    }
 })
 
 async function getVoucherStatistic() {
@@ -270,28 +285,28 @@ async function getVoucherStatistic() {
     return response.data
 }
 
-async function callWebHookLanggeng(data) {
+async function callWebHookLanggeng(data, clientId) {
     const config = {
         headers:{
             'Content-Type': 'application/json',
         }
     };
 
+    console.log("AYOOK APA YA CLIENT INFO NYA : ", clientMap[clientId])
+
     try {
-        const response = await axios.post('http://'+process.env.LANGGENG_API_URL +'/api/communication-providers/'+process.env.HARDCODED_CODE_USERCOMM+'/webhooks', data, config)
+        const response = await axios.post(clientMap[clientId].userInfo.webhook_url, data, config)
+        console.log("response webhook", response)
     } catch(e){
         console.log("error callwebhook", e)
         return "notok"
     }
-    
-
-    //console.log("response data : ", response.data)
 
     return "OK"
 }
 
-async function startClient(withQR, clientId){
-    console.log("try to resurrect clientId : ", clientId)
+async function startClient(withQR, userInfo){
+    console.log("try to resurrect clientId : ", userInfo.user_code)
     const clientPre = new Client({
         puppeteer: {
             args: [
@@ -299,7 +314,7 @@ async function startClient(withQR, clientId){
             ],
             headless: true,
         },
-        authStrategy: new LocalAuth({ clientId: clientId})
+        authStrategy: new LocalAuth({ clientId: userInfo.user_code})
     })
     
     clientPre.initialize().catch(_ => {
@@ -307,8 +322,8 @@ async function startClient(withQR, clientId){
     })
     
     clientPre.on('ready', async () => {
-        console.log('Client with id ' +clientId+ ' is ready!');
-        clientMap[clientId] = {client: clientPre, statusConn : true}
+        console.log('Client with id ' +userInfo.user_code+ ' is ready!');
+        clientMap[userInfo.user_code] = {client: clientPre, statusConn : true, createdOn : Math.abs(new Date()), userInfo : userInfo}
     });
     
     clientPre.on('message', async msg => {
@@ -332,11 +347,10 @@ async function startClient(withQR, clientId){
         }
     
         try{
-            callWebHookLanggeng(msg)
+            callWebHookLanggeng(msg, userInfo.user_code)
         } catch(e) {
             console.log("error incoming message")
         }
-        
     });
 
     return clientPre
