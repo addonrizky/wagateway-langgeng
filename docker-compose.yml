@@ -4,6 +4,8 @@ services:
         build : .
         ports: 
             - "3093:3093"
+        depends_on:
+            - db
         volumes:
             - .:/app/
             - ./node_modules/:/app/node_modules
@@ -11,7 +13,7 @@ services:
             - /bin/sh
             - -c
             - |
-                npm install
+                npm install mysql --save
                 nodemon index.js
         networks:
             - default
@@ -20,13 +22,31 @@ services:
         environment:
             LANGGENG_API_URL: host.docker.internal
             HARDCODED_CODE_USERCOMM: 9a25c2ce-eafc-47da-98b7-75e3a5b43666
-            HARDCODED_USER_ID: 30
-            HOST_DB_LANGGENG: host.docker.internal
-            USER_DB_LANGGENG: user
-            PASS_DB_LANGGENG: test
-            SCHEMA_DB_LANGGENG: laravel
+            HARDCODED_USER_ID: 20
+            HOST_DB_WALANGGENG: db
+            USER_DB_WALANGGENG: user1
+            PASS_DB_WALANGGENG: test
+            SCHEMA_DB_WALANGGENG: walanggeng
+            PORT_DB_WALANGGENG: 3306
             WATZAP_API_URL: https://api.watzap.id/v1
             WATZAP_SANUMBERKEY: HkaerOiLIoUw6Xk6
             WATZAP_APIKEY: KOXIJT9ZXEQ29RLX
             SUPERVISOR_NUMBER_1: 081585002225
             SUPERVISOR_NUMBER_2: 082216182618
+    db:
+        # image: mysql:8.0
+        image: mysql:8.0
+        command: --default-authentication-plugin=mysql_native_password
+        ports: 
+            - "3307:3306"
+        environment:
+            MYSQL_USER: user
+            MYSQL_PASSWORD: test
+            MYSQL_ROOT_PASSWORD: test
+        volumes:
+            - ./dump:/docker-entrypoint-initdb.d
+            - persistent:/var/lib/mysql
+        networks:
+            - default
+volumes:
+    persistent:
