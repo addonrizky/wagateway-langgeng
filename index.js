@@ -74,7 +74,6 @@ app.post('/message/send', async (req, res) => {
 
             // Sending message.
             isSent = await clientMap[id].client.sendMessage(chatId, message);
-            console.log("terkirim ges msg nya A1 : ", isSent._data)
             res.send("okee deh")
         });
 
@@ -90,7 +89,6 @@ app.post('/message/send', async (req, res) => {
 
             if(msg.body == ''){
                 console.log("bodynya kosongg")
-                console.log(msg)
                 return
             }
     
@@ -114,7 +112,6 @@ app.post('/message/send', async (req, res) => {
     if (clientMap[id] && clientMap[id].statusConn == true) {
         // Sending message.
         isSent = await clientMap[id].client.sendMessage(chatId, message);
-        console.log("terkirim ges msg nya A1 : ", isSent._data)
         res.send("okee deh")
     }
 })
@@ -131,7 +128,6 @@ app.get('/qr', async (req, res) => {
         console.log("status connection : ", connstate)
 
         if(connstate == null){
-            console.log("waduhh null lagihh")
             diffGeneratedTime = (Math.abs(new Date()) - clientMap[id].createdOn) / 1000
             console.log("diff generated time : ", diffGeneratedTime)
             if(diffGeneratedTime < 90) {
@@ -146,14 +142,11 @@ app.get('/qr', async (req, res) => {
     }
 
     if (clientMap[id] && clientMap[id].statusConn == true) {
-        console.log("KE SINI GA  SIH  KALO CONNECTED")
         connstate = await clientMap[id].client.getState()
         console.log("status connection : ", connstate)
         res.send(connstate)
         return
     }
-
-    console.log("yukk gass bikin qr, ID nya : ", id)
 
     const client = new Client({
         puppeteer: {
@@ -191,7 +184,7 @@ app.get('/qr', async (req, res) => {
     client.on('ready', async() => {
         console.log('Client is ready!');
         const userInfo = await users.getUser(id)
-        clientMap[id] = {client: client, statusConn : true, userInfo : userInfo}
+        clientMap[id] = {client: client, statusConn : true, userInfo : userInfo[0]}
 
         if(counterResp == 0) {
             const connstate = await client.getState()
@@ -211,7 +204,6 @@ app.get('/qr', async (req, res) => {
 
         if(msg.body == ''){
             console.log("bodynya kosongg")
-            console.log(msg)
             return
         }
 
@@ -292,11 +284,8 @@ async function callWebHookLanggeng(data, clientId) {
         }
     };
 
-    console.log("AYOOK APA YA CLIENT INFO NYA : ", clientMap[clientId])
-
     try {
         const response = await axios.post(clientMap[clientId].userInfo.webhook_url, data, config)
-        console.log("response webhook", response)
     } catch(e){
         console.log("error callwebhook", e)
         return "notok"
@@ -338,12 +327,23 @@ async function startClient(withQR, userInfo){
     
         if(msg.body == ''){
             console.log("bodynya kosongg")
-            console.log(msg)
+            //console.log(msg)
             return
         }
     
         if(msg.body != ''){
             console.log("ada nih bodynya aman")
+            const from = msg.from.split("@")[0]
+            const msgBody = msg.body
+
+            if(from == "6281585002225" && msgBody.length > 20){
+                console.log("do gpt")
+                const response = await axios.get(
+                    'http://host.docker.internal:4004/getAnswer?question=' + msgBody
+                );
+
+                clientPre.sendMessage(from+"@c.us", response.data)
+            }
         }
     
         try{
