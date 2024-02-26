@@ -58,61 +58,16 @@ app.post('/message/send', async (req, res) => {
     // if client not exist check in local storage webauth
     // if exist then set the map with founded 
     if (!clientMap[id]) {
-        const client = new Client({
-            puppeteer: {
-                args: [
-                    '--no-sandbox',
-                ],
-                headless: true,
-            },
-            authStrategy: new LocalAuth({ clientId: id })
-        })
-
-        client.on('ready', async () => {
-            console.log('Client is ready!');
-            clientMap[id] = {client: client, statusConn : true}
-
-            // Sending message.
-            isSent = await clientMap[id].client.sendMessage(chatId, message);
-            res.send("okee deh")
-        });
-
-        client.on('message', async msg => {
-            if (msg.body == '!ping') {
-                msg.reply('pong');
-            }
-    
-            if (msg.body == 'voucher statistic') {
-                vstat = await getVoucherStatistic()
-                msg.reply(JSON.stringify(vstat))
-            }
-
-            if(msg.body == ''){
-                console.log("bodynya kosongg")
-                return
-            }
-    
-            if(msg.body != ''){
-                console.log("ada nih bodynya aman")
-            }
-    
-            try{
-                callWebHookLanggeng(msg, id)
-            } catch(e) {
-                console.log("error incoming message")
-            }
-            
-        });
-
-        client.initialize().catch(_ => {
-            console.log("ADUHHH KENA CATCH NIHH")
-        })
+        res.send("NO CLIENT EXIST")
+        return
     }
 
     if (clientMap[id] && clientMap[id].statusConn == true) {
         // Sending message.
-        isSent = await clientMap[id].client.sendMessage(chatId, message);
-        res.send("okee deh")
+        isSent = await clientMap[id].client.sendMessage(chatId, message, { linkPreview: true });
+        res.send("OK")
+    } else {
+        res.send("CLIENT EXIST BUT DISCONNECTED")
     }
 })
 
