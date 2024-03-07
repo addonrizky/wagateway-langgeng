@@ -1,4 +1,4 @@
-const { Client, LocalAuth } = require('whatsapp-web.js');
+const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const express = require('express')
 const cors = require('cors');
 const axios = require('axios');
@@ -49,6 +49,9 @@ app.post('/message/send', async (req, res) => {
     // Your message.
     const message = req.body.message;
 
+    // attachment 
+    const attachmentUrl = req.body.attachment_url
+
     // Getting chatId from the number.
     // we have to delete "+" from the beginning and add "@c.us" at the end of the number.
     const chatId = phone + "@c.us";
@@ -64,7 +67,13 @@ app.post('/message/send', async (req, res) => {
 
     if (clientMap[id] && clientMap[id].statusConn == true) {
         // Sending message.
-        isSent = await clientMap[id].client.sendMessage(chatId, message, { linkPreview: true });
+        if(attachmentUrl != null || attachmentUrl !== undefined){
+            const media = await MessageMedia.fromUrl(attachmentUrl);
+            isSent = await clientMap[id].client.sendMessage(chatId, media, { caption: message });
+        } else {
+            isSent = await clientMap[id].client.sendMessage(chatId, message, { linkPreview: true });
+        }
+        
         res.send("OK")
     } else {
         res.send("CLIENT EXIST BUT DISCONNECTED")
@@ -117,20 +126,6 @@ app.get('/qr', async (req, res) => {
 
     client.once('qr', (qr) => {
         clientMap[id].createdOn = Math.abs(new Date())
-        repeateGenQR += 1
-        // Generate and scan this code with your phone
-        console.log("qr successfully generated", qr)
-        console.log("repeated times : ", repeateGenQR)
-        if(repeateGenQR > 1){
-            try{
-                client.pupBrowser.close()
-            } catch(e){
-                console.log("ERROR CLOSING AFTER RETRYINGG GEN QR : ", e)
-            }
-            
-            delete clientMap[id]
-            fs.rmSync('./.wwebjs_auth/session-' + id, {recursive: true, force: true,})
-        }
         res.send(qr)
         counterResp++
         return
@@ -148,6 +143,8 @@ app.get('/qr', async (req, res) => {
     });
 
     client.on('message', async msg => {
+        const from = msg.from.split("@")[0]
+
         if (msg.body == '!ping') {
             msg.reply('pong');
         }
@@ -162,8 +159,9 @@ app.get('/qr', async (req, res) => {
             return
         }
 
-        if(msg.body != ''){
-            console.log("ada nih bodynya aman")
+        if(msg.body != '' && from.length > 15){
+            console.log("incoming message from group, ignored")
+            return
         }
 
         try {
@@ -298,6 +296,11 @@ async function startClient(withQR, userInfo){
                 );
 
                 clientPre.sendMessage(from+"@c.us", response.data)
+            }
+
+            if (from.length > 15) {
+                console.log("incoming message from group, ignored")
+                return
             }
         }
     
