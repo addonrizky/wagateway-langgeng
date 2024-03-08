@@ -6,6 +6,7 @@ const fs = require("fs");
 const sess = require("./session")
 const db = require('./config/database');
 const users = require('./database/users')
+const moment = require('moment')
 
 const app = express()
 const port = 3093
@@ -81,6 +82,7 @@ app.post('/message/send', async (req, res) => {
 })
 
 app.get('/qr', async (req, res) => {
+    console.log(moment().format() + ": qr triggered")
     const id = req.query.id;
     let connstate = null
     let repeateGenQR = 0
@@ -116,6 +118,7 @@ app.get('/qr', async (req, res) => {
         puppeteer: {
             args: [
                 '--no-sandbox',
+                "--disable-setuid-sandbox",
             ],
             headless: true,
         },
@@ -125,6 +128,7 @@ app.get('/qr', async (req, res) => {
     clientMap[id] = {client: client, statusConn : false, createdOn: 0}
 
     client.once('qr', (qr) => {
+        console.log(moment().format() + ": qr generated -> " + qr)
         clientMap[id].createdOn = Math.abs(new Date())
         res.send(qr)
         counterResp++
@@ -253,6 +257,7 @@ async function startClient(withQR, userInfo){
         puppeteer: {
             args: [
                 '--no-sandbox',
+                "--disable-setuid-sandbox",
             ],
             headless: true,
         },
@@ -261,6 +266,10 @@ async function startClient(withQR, userInfo){
     
     clientPre.initialize().catch(_ => {
         console.log("ADUHHH KENA CATCH NIHH YG PREEE")
+    })
+
+    clientPre.on("change_state", async (currState) => {
+        console.log(currState)
     })
     
     clientPre.on('ready', async () => {
