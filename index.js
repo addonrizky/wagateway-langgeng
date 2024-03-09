@@ -102,9 +102,9 @@ app.get('/qr', async (req, res) => {
             }
         }
 
-        clientMap[id].client.destroy()
-        delete clientMap[id]
-        fs.rmSync('./.wwebjs_auth/session-' + id, {recursive: true, force: true,})
+        //clientMap[id].client.destroy()
+        //delete clientMap[id]
+        //fs.rmSync('./.wwebjs_auth/session-' + id, {recursive: true, force: true,})
     }
 
     if (clientMap[id] && clientMap[id].statusConn == true) {
@@ -114,16 +114,26 @@ app.get('/qr', async (req, res) => {
         return
     }
 
-    const client = new Client({
-        puppeteer: {
-            args: [
-                '--no-sandbox',
-                "--disable-setuid-sandbox",
-            ],
-            headless: true,
-        },
-        authStrategy: new LocalAuth({ clientId: id })
-    });
+    let client = null
+    if(clientMap[id]){
+        client = clientMap[id].client
+    }
+
+    if(!clientMap[id]){
+        client = new Client({
+            puppeteer: {
+                args: [
+                    '--no-sandbox',
+                    "--disable-setuid-sandbox",
+                ],
+                headless: true,
+            },
+            authStrategy: new LocalAuth({ clientId: id })
+        });
+        client.initialize().catch(e => {
+            console.log("EH KE CATCH DEH", e)
+        })
+    }   
 
     clientMap[id] = {client: client, statusConn : false, createdOn: 0}
 
@@ -190,10 +200,6 @@ app.get('/qr', async (req, res) => {
 
     client.on('change_state', state => {
         console.log("perubahan state nya : ", state)
-    })
-
-    client.initialize().catch(e => {
-        console.log("EH KE CATCH DEH", e)
     })
 })
 
