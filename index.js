@@ -272,8 +272,8 @@ async function startClient(withQR, userInfo){
         authStrategy: new LocalAuth({ clientId: userInfo.user_code})
     })
     
-    clientPre.initialize().catch(_ => {
-        console.log("ADUHHH KENA CATCH NIHH YG PREEE")
+    clientPre.initialize().catch(e => {
+        console.log("ADUHHH KENA CATCH NIHH YG PREEE", e)
     })
 
     clientPre.on("change_state", async (currState) => {
