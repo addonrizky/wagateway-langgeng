@@ -187,6 +187,15 @@ app.get('/qr', async (req, res) => {
         }
         
     });
+    
+    client.on('message_create', async msg => {
+        const to = msg.to.split("@")[0]
+        const isOutbound = msg.id.fromMe
+        if(msg.body == "" || !isOutbound){
+            return
+        }
+        callInsertMessageHistory(id, to, "outbound", msg.body)
+    })
 
     client.on('disconnected', rsn => {
         console.log("disconnected nih")
@@ -259,6 +268,30 @@ async function callWebHookLanggeng(data, clientId) {
     return "OK"
 }
 
+async function callInsertMessageHistory(userId, target, type, message) {
+    const config = {
+        headers:{
+            'Content-Type': 'application/json',
+        }
+    };
+
+    const data = {
+        user_id : userId,
+        target : target,
+        type : type,
+        message : message,
+    }
+
+    try {
+        const response = await axios.post(process.env.LANGGENG_API_URL + "/api/message_history/create", data, config)
+    } catch(e){
+        console.log("error call insert message history", e)
+        return "notok"
+    }
+
+    return "OK"
+}
+
 async function startClient(withQR, userInfo){
     console.log("try to resurrect clientId : ", userInfo.user_code)
     const clientPre = new Client({
@@ -284,6 +317,17 @@ async function startClient(withQR, userInfo){
         console.log('Client with id ' +userInfo.user_code+ ' is ready!');
         clientMap[userInfo.user_code] = {client: clientPre, statusConn : true, createdOn : Math.abs(new Date()), userInfo : userInfo}
     });
+
+    clientPre.on('message_create', async msg => {
+        const to = msg.to.split("@")[0]
+        const isOutbound = msg.id.fromMe
+        if(msg.body == "" || !isOutbound){
+            return
+        }
+
+        callInsertMessageHistory(userInfo.user_code, to, "outbound", msg.body)
+    })
+
     
     clientPre.on('message', async msg => {
         if (msg.body == '!ping') {
