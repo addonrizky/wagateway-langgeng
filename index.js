@@ -74,6 +74,8 @@ app.post('/message/send', async (req, res) => {
         } else {
             isSent = await clientMap[id].client.sendMessage(chatId, message, { linkPreview: true });
         }
+
+        console.log(moment().format() + ": result sent message from id " + id)
         
         res.send("OK")
     } else {
@@ -102,9 +104,9 @@ app.get('/qr', async (req, res) => {
             }
         }
 
-        //clientMap[id].client.destroy()
-        //delete clientMap[id]
-        //fs.rmSync('./.wwebjs_auth/session-' + id, {recursive: true, force: true,})
+        clientMap[id].client.destroy()
+        delete clientMap[id]
+        fs.rmSync('./.wwebjs_auth/session-' + id, {recursive: true, force: true,})
     }
 
     if (clientMap[id] && clientMap[id].statusConn == true) {
