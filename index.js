@@ -217,14 +217,6 @@ db.connect("mode_production", async function (err, rslt) {
             listDir.filter(dir => dir != "session")
             .map(async dir => {
                 const userCode = dir.split("-")[1]
-
-                if(clientMap[userCode] && clientMap[userCode].statusConn != true){
-                    clientMap[userCode].client.destroy()
-                    delete clientMap[userCode]
-                    fs.rmSync('./.wwebjs_auth/session-' + userCode, {recursive: true, force: true,})
-                    return
-                }
-
                 const userInfo = await users.getUser(userCode)
                 const clientStarted = await startClient(false, userInfo[0])
                 //clientMap[userCode] = {client: clientStarted, statusConn : false, createdOn: Math.abs(new Date()), userInfo: userInfo[0]}
